@@ -79,25 +79,6 @@ GMAT DefaultProp.StopIfAccuracyIsViolated = true;
 
 
 %----------------------------------------
-%---------- EventLocators
-%----------------------------------------
-Create EclipseLocator EclipseLocator;
-GMAT EclipseLocator.Spacecraft = DefaultSC;
-GMAT EclipseLocator.Filename = 'GMAT_Eclipse.txt';
-GMAT EclipseLocator.OccultingBodies = {Earth};
-GMAT EclipseLocator.InputEpochFormat = 'TAIModJulian';
-GMAT EclipseLocator.InitialEpoch = '21545';
-GMAT EclipseLocator.StepSize = 10;
-GMAT EclipseLocator.FinalEpoch = '21545.138';
-GMAT EclipseLocator.UseLightTimeDelay = true;
-GMAT EclipseLocator.UseStellarAberration = true;
-GMAT EclipseLocator.WriteReport = true;
-GMAT EclipseLocator.RunMode = Automatic;
-GMAT EclipseLocator.UseEntireInterval = true;
-GMAT EclipseLocator.EclipseTypes = {'Umbra'};
-
-
-%----------------------------------------
 %---------- Subscribers
 %----------------------------------------
 Create OrbitView DefaultOrbitView;

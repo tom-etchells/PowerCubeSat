@@ -1,4 +1,4 @@
-function orbit = fcn_read_data(reportFileName, eclipseFileName)
+function orbit = fcn_read_data(reportFileName)
 %% Extract orbit data
 % open file
 fileID = fopen(reportFileName,'r');
@@ -18,29 +18,6 @@ dateString = strcat(reportData{1,1}(:),'-',reportData{1,2}(:),'-',reportData{1,3
 orbit.reportTime = datetime(dateString,'InputFormat','dd-MMM-yyyy HH:mm:ss.SSS');
 % get total number of steps
 orbit.numSteps = length(orbit.reportTime);
-
-
-%% Extract eclipse data
-% open file and read eclipse data
-fileID = fopen(eclipseFileName,'r');
-% skip first 3 lines (header lines)
-fgetl(fileID);fgetl(fileID);fgetl(fileID);
-
-% extract eclipse data into array
-eclipseData = textscan(fileID,'%s %s %s %s %s %s %s %s %f %s %s %d %f','Delimiter',' ','MultipleDelimsAsOne',1);
-fclose(fileID);
-
-% remove last 4 lines (textscan ignores the blacnk lines so this removes
-% the 4 info lines at the end of the Eclipse file)
-len = length(eclipseData{1}) - 4;
-
-% get eclipse start data
-dateString = strcat(eclipseData{1,1}(1:len),'-',eclipseData{1,2}(1:len),'-',eclipseData{1,3}(1:len),{' '},eclipseData{1,4}(1:len));
-orbit.eclipseStart = datetime(dateString,'InputFormat','dd-MMM-yyyy HH:mm:ss.SSS');
-orbit.numEclipses = length(orbit.eclipseStart);
-% get eclipse stop data
-dateString = strcat(eclipseData{1,5}(1:len),'-',eclipseData{1,6}(1:len),'-',eclipseData{1,7}(1:len),{' '},eclipseData{1,8}(1:len));
-orbit.eclipseStop = datetime(dateString,'InputFormat','dd-MMM-yyyy HH:mm:ss.SSS');
 
 
 %% Create unit vector arrays for each timestep
