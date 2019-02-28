@@ -46,6 +46,7 @@ GMAT DefaultSC.EulerAngleSequence = '321';
 
 
 
+
 %----------------------------------------
 %---------- ForceModels
 %----------------------------------------
@@ -78,32 +79,13 @@ GMAT DefaultProp.StopIfAccuracyIsViolated = true;
 
 
 %----------------------------------------
-%---------- EventLocators
-%----------------------------------------
-Create EclipseLocator EclipseLocator;
-GMAT EclipseLocator.Spacecraft = DefaultSC;
-GMAT EclipseLocator.Filename = 'Eclipse.txt';
-GMAT EclipseLocator.OccultingBodies = {Earth};
-GMAT EclipseLocator.InputEpochFormat = 'TAIModJulian';
-GMAT EclipseLocator.InitialEpoch = '21545';
-GMAT EclipseLocator.StepSize = 10;
-GMAT EclipseLocator.FinalEpoch = '21545.138';
-GMAT EclipseLocator.UseLightTimeDelay = true;
-GMAT EclipseLocator.UseStellarAberration = true;
-GMAT EclipseLocator.WriteReport = true;
-GMAT EclipseLocator.RunMode = Automatic;
-GMAT EclipseLocator.UseEntireInterval = true;
-GMAT EclipseLocator.EclipseTypes = {'Umbra'};
-
-
-%----------------------------------------
 %---------- Subscribers
 %----------------------------------------
 Create OrbitView DefaultOrbitView;
 GMAT DefaultOrbitView.SolverIterations = Current;
 GMAT DefaultOrbitView.UpperLeft = [ 0 0 ];
-GMAT DefaultOrbitView.Size = [ 0.4994117647058823 1.08375 ];
-GMAT DefaultOrbitView.RelativeZOrder = 822;
+GMAT DefaultOrbitView.Size = [ 0.4994117647058823 1.082954545454546 ];
+GMAT DefaultOrbitView.RelativeZOrder = 41;
 GMAT DefaultOrbitView.Maximized = false;
 GMAT DefaultOrbitView.Add = {DefaultSC, Earth};
 GMAT DefaultOrbitView.CoordinateSystem = EarthMJ2000Eq;
@@ -137,7 +119,7 @@ GMAT ReportFile.UpperLeft = [ 0.0111764705882353 0.025 ];
 GMAT ReportFile.Size = [ 0.5952941176470589 0.79 ];
 GMAT ReportFile.RelativeZOrder = 232;
 GMAT ReportFile.Maximized = false;
-GMAT ReportFile.Filename = './Report.txt';
+GMAT ReportFile.Filename = './GMAT_Report.txt';
 GMAT ReportFile.Precision = 16;
 GMAT ReportFile.Add = {DefaultSC.A1Gregorian, DefaultSC.EarthMJ2000Eq.X, DefaultSC.EarthMJ2000Eq.Y, DefaultSC.EarthMJ2000Eq.Z, DefaultSC.EarthMJ2000Eq.VX, DefaultSC.EarthMJ2000Eq.VY, DefaultSC.EarthMJ2000Eq.VZ, Sun.EarthMJ2000Eq.X, Sun.EarthMJ2000Eq.Y, Sun.EarthMJ2000Eq.Z};
 GMAT ReportFile.WriteHeaders = true;
@@ -150,9 +132,9 @@ GMAT ReportFile.WriteReport = true;
 
 Create GroundTrackPlot GroundTrackPlot1;
 GMAT GroundTrackPlot1.SolverIterations = Current;
-GMAT GroundTrackPlot1.UpperLeft = [ 0.4858823529411765 0 ];
-GMAT GroundTrackPlot1.Size = [ 0.4994117647058823 1.08375 ];
-GMAT GroundTrackPlot1.RelativeZOrder = 721;
+GMAT GroundTrackPlot1.UpperLeft = [ 0.4852941176470588 0 ];
+GMAT GroundTrackPlot1.Size = [ 0.4994117647058823 1.082954545454546 ];
+GMAT GroundTrackPlot1.RelativeZOrder = 33;
 GMAT GroundTrackPlot1.Maximized = false;
 GMAT GroundTrackPlot1.Add = {DefaultSC};
 GMAT GroundTrackPlot1.DataCollectFrequency = 1;

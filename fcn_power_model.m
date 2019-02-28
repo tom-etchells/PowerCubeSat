@@ -2,10 +2,11 @@ function results = fcn_power_model(mission, orbit, panel, attitude)
 %% Debug data
 % clean up workspace clear variables; close all; clc;
 
-% save data from GUI for debugging save('data.mat', 'mission', 'orbit',
-% 'panel', 'attitude')
+% save data from GUI for debugging
+% save('data.mat', 'mission', 'orbit', 'panel', 'attitude')
 
-% load data from GUI for debugging load('data.mat')
+% load data from GUI for debugging
+% load('data.mat')
 
 
 %% Inputs
@@ -57,233 +58,131 @@ while orbit.reportTime(i) <  orbitEnd
 end
 results.orbitStepLength = i;
 
-% set up eclipse number variables
-eclipseNum = 1;
-inEclipse = 0;
-
 % start waitbar
 prog = waitbar(0, 'Start...');
+
+% radius of earth for eclipse calculations
+rEarth = 6371e3;
 
 
 %% Loop over each timestep
 for i = 1:orbit.numSteps
     % iterate waitbar each timestep
+    % TODO(change this to update once per orbit, updating too often can be
+    % slow)
     waitString = sprintf('%i of %i: Calculating...', i, orbit.numSteps);
     waitbar(i / orbit.numSteps, prog, waitString);
     
-    % check if there are any eclipses TODO(rewrite this check to remove the
-    % need for a double set of calculations for the no eclipse set)
-    if orbit.numEclipses > 0
-        % if there are eclipses, check if in an eclipse, if so then set
-        % flag and dont perform calculations. If not in eclipse then
-        % perform calculations.
-        if (orbit.reportTime(i) > orbit.eclipseStart(eclipseNum) && orbit.reportTime(i) < orbit.eclipseStop(eclipseNum))
-            inEclipse = 1;
-        else
-            %% Sun vector unit normal in satellite geoemetry basis
-            % need the sun vector in the body centred and alligned
-            % coordinate system, the satellite body is centred on the
-            % origin and alligned to the x-y-z axes
-            
-            % to get this, change basis from normal earth centered
-            % coordinate system to satellite centered and aligned
-            % coordinate system
-            
-            % set change of basis matrix for each timestep, 3x3 matrix made
-            % from 3 column vecotrs, each being the desired direction of
-            % the positive x, y, and z faces of the satellite in the earth
-            % centered coordinate system
-            changeBasisSun(:,:,i) = [attitude.satPositiveX(i,:).', attitude.satPositiveY(i,:).', attitude.satPositiveZ(i,:).'];
-            
-            % find the new sun vector in the satellite's coordinate system
-            satSunUnitNew(i,:) = changeBasisSun(:,:,i) \ orbit.satSunUnit(i,:).';
-            
-            
-            %% Change satellite geometry basis to sun pov
-            % change the basis of the satellite panel coordinates to be
-            % alligned to Sun's 'point of view'
-            
-            % the new z axis is the sun vector, the x and y orientation
-            % does not matter as long as all three vectors are orthoganal
-            
-            % pick two components, swap and add a zero, this creates a
-            % vector in the perpendicular plane of the original sun vecotor
-            v1(1) = -satSunUnitNew(i,2);
-            v1(2) = satSunUnitNew(i,1);
-            v1(3) = 0;
-            % get unit vector
-            v1 = v1 / norm(v1);
-            
-            % cross product to get second vector in perpendicular plane
-            v2 = cross([satSunUnitNew(i,1) satSunUnitNew(i,2) satSunUnitNew(i,3)], v1);
-            
-            % create change of basis matrix from the 3 orthoganal vectors,
-            % new z is the sun vector in body centred and aligned
-            % coordinate system
-            changeBasisSat(:,:,i) = [v1.', v2.', satSunUnitNew(i,:).'];
-            
-            % find new points
-            for j = 1:numPanels
-                panel{j}.newPoints(:,:,i) = (changeBasisSat(:,:,i) \ panel{j}.points(:,:).').';
-                panel{j}.newUnitNormal(i,:) = (changeBasisSat(:,:,i) \ panel{j}.unitNormal(:));
-            end
-            
-            
-            %% Define polygons
-            % define polygons from new points, these are the panels as the
-            % sun views them, polygons allow clipping and area calculations
-            % which are equivelent to cosine loss factor
-            
-            % polyshapes for each panel body mounted panels, check if
-            % pointing at Sun, if not then dont bother creating a polygon
-            for j = 1:6
-                if panel{j}.newUnitNormal(i,3) > 0
-                    panel{j}.polygon(i) = polyshape(panel{j}.newPoints(:,1:2,i));
-                end
-            end
-            
-            % deplotable panels
-            for j = 7:numPanels
-                panel{j}.polygon(i) = polyshape(panel{j}.newPoints(:,1:2,i));
-            end
-            
-            
-            %% Find average z-level of each polygon
-            % average z level shows which panels are infront of each other
-            % with resepect to the Sun's 'point of view', allowing
-            % clipping.
-            
-            % Average of points only works as size and shape of panels is
-            % known (arbitrary panels could have lower average z whilst
-            % being infront, i.e. very long panels compared to shorter
-            % ones)
-            
-            % average z-level of each panel
-            for j = 1:numPanels
-                panel{j}.avgZ(i) = mean(panel{j}.newPoints(:,3,i));
-            end
-            
-            
-            %% Clip each polygon with every other polygon
-            % use average z level to clip polygons, leaving only visible
-            % area of visible polygons
-            
-            % clip all polygons
-            for j = 1:numPanels
-                % with all other polygons
-                for k = (j + 1):numPanels
-                    % only clip if both polygons have non-zero area
-                    if area(panel{j}.polygon(i)) ~= 0 && area(panel{k}.polygon(i)) ~= 0
-                        % if panel j is above panel k then subtract panel j
-                        % from panel k, else do opposite
-                        if panel{j}.avgZ(i) > panel{k}.avgZ(i)
-                            panel{k}.polygon(i) = subtract(panel{k}.polygon(i), panel{j}.polygon(i));
-                        else
-                            panel{j}.polygon(i) = subtract(panel{j}.polygon(i), panel{k}.polygon(i));
-                        end
-                    end
-                end
-            end
-            
-            
-            %% Power calcualtions
-            % use the clipped polygons to get panel areas, these include
-            % cosine losses due to the geometry transformations
-
-            % if just left an eclipse, reset flag and iterate eclipse
-            % number for checking for next eclipse
-            if inEclipse == 1
-                inEclipse = 0;
-                % iterate eclipse number (check against max number of
-                % eclipses)
-                if eclipseNum < length(orbit.eclipseStart)
-                    eclipseNum = eclipseNum + 1;
-                else
-                end
-            end
-            
-            % if not in an eclipse, perform power calculations body mounted
-            % panels TODO(currently assumes Z faces have no solar panels,
-            % need to be able to set this in the GUI and the have a check
-            % if a panel is 'active')
-            for j = 1:4
-                % power for each panel at each timestep
-                results.powerPanel(i, j) = powerEOL * area(panel{j}.polygon(i)) / 1e6;
-                % total power for the satellite at each timestep
-                results.powerTotal(i) = results.powerTotal(i) + results.powerPanel(i, j);
-            end
-            
-            % deployable panels
-            for j = 7:numPanels
-                % check if panel normal is pointing toward sun, if yes then
-                % it is iluminated so calculate power
-                if panel{j}.newUnitNormal(i,3) > 0
-                    results.powerPanel(i, j) = powerEOL * area(panel{j}.polygon(i)) / 1e6;
-                end
-                results.powerTotal(i) = results.powerTotal(i) + results.powerPanel(i, j);
-            end
-        end
-        
-        %% Orbit averaged power calculations
-        % for orbit averaged power results, check if at the end of an orbit
-        if orbit.reportTime(i) > orbitEnd
-            % set orbit end step
-            orbitEndStep = i;
-            % set avg power for this orbit
-            results.powerAvg(orbitNum) = mean(results.powerTotal(orbitStartStep:orbitEndStep));
-            % set time for this orbit as halfway through the orbit
-            orbitMidStep = floor((orbitStartStep + orbitEndStep) / 2);
-            results.powerAvgTime(orbitNum) = orbit.reportTime(orbitMidStep);
-            
-            % set new orbit start step
-            orbitStartStep = i + 1;
-            % set new time for next orbit end
-            orbitEnd = orbitEnd + seconds(orbit.orbitalPeriod);
-            % iterate orbit number
-            orbitNum = orbitNum + 1;
-        end
     
-       
+    %% Check if in eclipse
+    % solve equation of intersection https://math.stackexchange.com/questions/1939423/calculate-if-vector-intersects-sphere
+    a = dot(orbit.satSunUnit(i,:), orbit.satSunUnit(i,:));
+    b = 2 * dot(orbit.satSunUnit(i,:), orbit.satPos(i,:));
+    c = dot(orbit.satPos(i,:), orbit.satPos(i,:)) - rEarth^2;
+    
+    r = roots([a b c]);
+    % if roots positive and non imaginary then in eclipse (intercetion is infront of
+    % satellite)
+    if r(1) > 0 && r(2) > 0 && imag(r(1)) == 0 && imag(r(2)) == 0
+        % in eclipse so don't perform calculations
     else
-    %% No eclipse case
-    % TODO(fix the need for the calculations to be repeated, this section
-    % is needed due to some orbits having no eclipses and that causing
-    % errors with the eclipse checking)
-        % Sun vector unit normal in satellite geoemetry basis
+        % not in eclipse so do perform calculations
+        %% Sun vector unit normal in satellite geoemetry basis
+        % need the sun vector in the body centred and alligned
+        % coordinate system, the satellite body is centred on the
+        % origin and alligned to the x-y-z axes
+        
+        % to get this, change basis from normal earth centered
+        % coordinate system to satellite centered and aligned
+        % coordinate system
+        
+        % set change of basis matrix for each timestep, 3x3 matrix made
+        % from 3 column vecotrs, each being the desired direction of
+        % the positive x, y, and z faces of the satellite in the earth
+        % centered coordinate system
         changeBasisSun(:,:,i) = [attitude.satPositiveX(i,:).', attitude.satPositiveY(i,:).', attitude.satPositiveZ(i,:).'];
+        
+        % find the new sun vector in the satellite's coordinate system
         satSunUnitNew(i,:) = changeBasisSun(:,:,i) \ orbit.satSunUnit(i,:).';
         
-        % Change satellite geometry basis to sun pov
+        
+        %% Change satellite geometry basis to sun pov
+        % change the basis of the satellite panel coordinates to be
+        % alligned to Sun's 'point of view'
+        
+        % the new z axis is the sun vector, the x and y orientation
+        % does not matter as long as all three vectors are orthoganal
+        
+        % pick two components, swap and add a zero, this creates a
+        % vector in the perpendicular plane of the original sun vecotor
         v1(1) = -satSunUnitNew(i,2);
         v1(2) = satSunUnitNew(i,1);
         v1(3) = 0;
+        % get unit vector
         v1 = v1 / norm(v1);
+        
+        % cross product to get second vector in perpendicular plane
         v2 = cross([satSunUnitNew(i,1) satSunUnitNew(i,2) satSunUnitNew(i,3)], v1);
+        
+        % create change of basis matrix from the 3 orthoganal vectors,
+        % new z is the sun vector in body centred and aligned
+        % coordinate system
         changeBasisSat(:,:,i) = [v1.', v2.', satSunUnitNew(i,:).'];
+        
+        % find new points
         for j = 1:numPanels
             panel{j}.newPoints(:,:,i) = (changeBasisSat(:,:,i) \ panel{j}.points(:,:).').';
             panel{j}.newUnitNormal(i,:) = (changeBasisSat(:,:,i) \ panel{j}.unitNormal(:));
         end
         
-        % Define polygons
+        
+        %% Define polygons
+        % define polygons from new points, these are the panels as the
+        % sun views them, polygons allow clipping and area calculations
+        % which are equivelent to cosine loss factor
+        
+        % polyshapes for each panel body mounted panels, check if
+        % pointing at Sun, if not then dont bother creating a polygon
         for j = 1:6
             if panel{j}.newUnitNormal(i,3) > 0
                 panel{j}.polygon(i) = polyshape(panel{j}.newPoints(:,1:2,i));
             end
         end
+        
+        % deplotable panels
         for j = 7:numPanels
             panel{j}.polygon(i) = polyshape(panel{j}.newPoints(:,1:2,i));
         end
         
-        % Find average z-level of each polygon
+        
+        %% Find average z-level of each polygon
+        % average z level shows which panels are infront of each other
+        % with resepect to the Sun's 'point of view', allowing
+        % clipping.
+        
+        % Average of points only works as size and shape of panels is
+        % known (arbitrary panels could have lower average z whilst
+        % being infront, i.e. very long panels compared to shorter
+        % ones)
+        
+        % average z-level of each panel
         for j = 1:numPanels
             panel{j}.avgZ(i) = mean(panel{j}.newPoints(:,3,i));
         end
         
-        % Clip each polygon with every other polygon
+        
+        %% Clip each polygon with every other polygon
+        % use average z level to clip polygons, leaving only visible
+        % area of visible polygons
+        
+        % clip all polygons
         for j = 1:numPanels
+            % with all other polygons
             for k = (j + 1):numPanels
+                % only clip if both polygons have non-zero area
                 if area(panel{j}.polygon(i)) ~= 0 && area(panel{k}.polygon(i)) ~= 0
+                    % if panel j is above panel k then subtract panel j
+                    % from panel k, else do opposite
                     if panel{j}.avgZ(i) > panel{k}.avgZ(i)
                         panel{k}.polygon(i) = subtract(panel{k}.polygon(i), panel{j}.polygon(i));
                     else
@@ -293,39 +192,54 @@ for i = 1:orbit.numSteps
             end
         end
         
-        % Power calcualtions
+        
+        %% Power calcualtions
+        % use the clipped polygons to get panel areas, these include
+        % cosine losses due to the geometry transformations
+        
+        % if not in an eclipse, perform power calculations body mounted
+        % panels TODO(currently assumes Z faces have no solar panels,
+        % need to be able to set this in the GUI and the have a check
+        % if a panel is 'active')
         for j = 1:4
+            % power for each panel at each timestep
             results.powerPanel(i, j) = powerEOL * area(panel{j}.polygon(i)) / 1e6;
+            % total power for the satellite at each timestep
             results.powerTotal(i) = results.powerTotal(i) + results.powerPanel(i, j);
         end
-      
+        
+        % deployable panels
         for j = 7:numPanels
+            % check if panel normal is pointing toward sun, if yes then
+            % it is iluminated so calculate power
             if panel{j}.newUnitNormal(i,3) > 0
                 results.powerPanel(i, j) = powerEOL * area(panel{j}.polygon(i)) / 1e6;
             end
             results.powerTotal(i) = results.powerTotal(i) + results.powerPanel(i, j);
         end
+    end % end if eclipse check
+    
+    
+    %% Orbit averaged power calculations
+    % for orbit averaged power results, check if at the end of an orbit
+    if orbit.reportTime(i) > orbitEnd
+        % set orbit end step
+        orbitEndStep = i;
+        % set avg power for this orbit
+        results.powerAvg(orbitNum) = mean(results.powerTotal(orbitStartStep:orbitEndStep));
+        % set time for this orbit as halfway through the orbit
+        orbitMidStep = floor((orbitStartStep + orbitEndStep) / 2);
+        results.powerAvgTime(orbitNum) = orbit.reportTime(orbitMidStep);
         
-        
-        % Orbit averaged power calculations
-        if orbit.reportTime(i) > orbitEnd
-            % set orbit end step
-            orbitEndStep = i;
-            % set avg power for this orbit
-            results.powerAvg(orbitNum) = mean(results.powerTotal(orbitStartStep:orbitEndStep));
-            % set time for this orbit as halfway through the orbit
-            orbitMidStep = floor((orbitStartStep + orbitEndStep) / 2);
-            results.powerAvgTime(orbitNum) = orbit.reportTime(orbitMidStep);
-            
-            % set new orbit start step
-            orbitStartStep = i + 1;
-            % set new time for next orbit end
-            orbitEnd = orbitEnd + seconds(orbit.orbitalPeriod);
-            % iterate orbit number
-            orbitNum = orbitNum + 1;
-        end
+        % set new orbit start step
+        orbitStartStep = i + 1;
+        % set new time for next orbit end
+        orbitEnd = orbitEnd + seconds(orbit.orbitalPeriod);
+        % iterate orbit number
+        orbitNum = orbitNum + 1;
     end
-end
-% stop waitbar
+end % end for numSteps
+
+% close waitbar
 close(prog)
-end
+end % end function
