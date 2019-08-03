@@ -1,5 +1,5 @@
 # PowerCubeSat
-A CubeSat Power Modelling Tool
+A MATLAB based power modelling tool designed for use with CubeSat.
 
 The Power Model presented here is essentially a minimum working example. An overhaul of the GUI and the internal data structures is currently in the works. Documentation and a guide for direct user input for more complex geometries and attitudes are to follow.
 
