@@ -3,7 +3,7 @@ A CubeSat Power Modelling Tool
 
 The Power Model presented here is essentially a minimum working example. An overhaul of the GUI and the internal data structures is currently in the works. Documentation and a guide for direct user input for more complex geometries and attitudes are to follow.
 
-The power model has been validated against Thales Alenia Space's power model. Further validation, especially against actual on-orbit satellite power data, is planned any assistance would be welcome.
+The power model has been validated against Thales Alenia Space's power model. Further validation, especially against actual on-orbit satellite power data, is planned and any assistance would be welcome.
 
 Contact tom.etchells@bristol.ac.uk for any queries or assistance.
 
