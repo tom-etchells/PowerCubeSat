@@ -1,7 +1,9 @@
 # PowerCubeSat
 A CubeSat Power Modelling Tool
 
-The Power Model still needs some work, especially the GUI, but it does currently work. Documentation and a guide for direct user input for more complex geometries and attitudes are to follow.
+The Power Model presented here is essentially a minimum working example. An overhaul of the GUI and the internal data structures is currently in the works. Documentation and a guide for direct user input for more complex geometries and attitudes are to follow.
+
+The power model has been validated against Thales Alenia Space's power model. Further validation, especially against actual on-orbit satellite power data, is planned.
 
 
 # Orbit Data
